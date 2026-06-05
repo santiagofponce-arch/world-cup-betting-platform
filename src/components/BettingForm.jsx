@@ -408,6 +408,22 @@ const BettingForm = ({ currentUser, t }) => {
             <div className="matches-list">
               {groupMatches.filter(m => m.group === activeGroup).map(renderMatchCard)}
             </div>
+            
+            <div className="group-tabs-list" style={{ marginTop: '2rem' }}>
+              {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].map(g => (
+                <button
+                  key={`bottom-${g}`}
+                  onClick={() => {
+                    setActiveGroup(g);
+                    window.scrollTo({ top: 0, behavior: 'smooth' }); // Optional: Scroll to top of matches when clicked
+                  }}
+                  className={`group-tab-btn ${activeGroup === g ? 'active' : ''}`}
+                  style={{ '--tab-color': groupColors[g] || '#FFFFFF' }}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
           </>
         )}
 

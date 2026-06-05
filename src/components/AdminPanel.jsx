@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, writeBatch, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import matchesData from '../data/matches.json';
 import { calculateTotalUserStats } from '../utils/scoringLogic';
@@ -12,6 +12,9 @@ const AdminPanel = () => {
   const [calcStatus, setCalcStatus] = useState('idle');
   const [adminView, setAdminView] = useState('group');
   const [adminActiveGroup, setAdminActiveGroup] = useState('A');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailStatus, setEmailStatus] = useState('idle');
   const [globalLocks, setGlobalLocks] = useState({ 
     knockoutLocks: {
       'Round of 32': true,
@@ -121,6 +124,54 @@ const AdminPanel = () => {
     } catch (err) {
       console.error(err);
       setSaveStatus('idle');
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!emailSubject || !emailBody) return alert("Please fill out subject and body.");
+    setEmailStatus('sending');
+    try {
+      await addDoc(collection(db, 'mail'), {
+        to: 'santiago.f.ponce@gmail.com',
+        message: {
+          subject: `[TEST] ${emailSubject}`,
+          html: emailBody
+        }
+      });
+      setEmailStatus('success');
+      setTimeout(() => setEmailStatus('idle'), 3000);
+    } catch(err) {
+      console.error(err);
+      setEmailStatus('error');
+    }
+  };
+
+  const handleBroadcastEmail = async () => {
+    if (!emailSubject || !emailBody) return alert("Please fill out subject and body.");
+    if (!window.confirm("🚨 Are you absolutely sure you want to broadcast this email to EVERY registered user?")) return;
+    setEmailStatus('sending');
+    try {
+      const usersSnap = await getDocs(collection(db, 'Users'));
+      const emails = [];
+      usersSnap.forEach(userDoc => {
+        if(userDoc.data().email) emails.push(userDoc.data().email);
+      });
+      
+      await addDoc(collection(db, 'mail'), {
+        to: 'santiago.f.ponce@gmail.com',
+        bcc: emails,
+        message: {
+          subject: emailSubject,
+          html: emailBody
+        }
+      });
+      setEmailStatus('success');
+      setTimeout(() => setEmailStatus('idle'), 3000);
+      setEmailSubject('');
+      setEmailBody('');
+    } catch(err) {
+      console.error(err);
+      setEmailStatus('error');
     }
   };
 
@@ -255,6 +306,46 @@ const AdminPanel = () => {
           >
             {calcStatus === 'idle' ? '🚨 RECALCULATE LEADERBOARD 🚨' : calcStatus === 'calculating' ? 'Processing Engine...' : 'Wired to Leaderboard!'}
           </button>
+        </div>
+      </div>
+
+      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
+        <h3 style={{ color: 'var(--primary)', marginBottom: '1rem', textAlign: 'center' }}>Email Broadcast (Admin Only)</h3>
+        <p style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Send a message to all Polla participants. They will be BCC'd automatically.</p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '600px', margin: '0 auto' }}>
+          <input 
+            type="text" 
+            placeholder="Email Subject"
+            style={{ padding: '0.8rem', background: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', borderRadius: '8px' }}
+            value={emailSubject}
+            onChange={e => setEmailSubject(e.target.value)}
+          />
+          <textarea 
+            placeholder="Email Body (You can use HTML tags here like <b>bold</b> or <br> for new lines)"
+            rows={5}
+            style={{ padding: '0.8rem', background: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', borderRadius: '8px', resize: 'vertical' }}
+            value={emailBody}
+            onChange={e => setEmailBody(e.target.value)}
+          />
+          
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <button 
+              onClick={handleSendTestEmail} 
+              disabled={emailStatus === 'sending'}
+              style={{ padding: '0.8rem 1.5rem', background: '#333', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer', flex: 1 }}
+            >
+              {emailStatus === 'sending' ? 'Sending...' : 'Send Test (To Me)'}
+            </button>
+            <button 
+              onClick={handleBroadcastEmail} 
+              disabled={emailStatus === 'sending'}
+              style={{ padding: '0.8rem 1.5rem', background: 'var(--primary)', color: 'black', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer', flex: 1 }}
+            >
+              {emailStatus === 'sending' ? 'Sending...' : emailStatus === 'success' ? 'Sent!' : 'Broadcast to All Users'}
+            </button>
+          </div>
+          {emailStatus === 'error' && <p style={{ color: '#ff4757', textAlign: 'center', margin: 0 }}>Error sending email. Check console.</p>}
         </div>
       </div>
 
