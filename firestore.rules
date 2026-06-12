@@ -3,30 +3,30 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // 0. Profiles: Users can edit their own profiles securely
     match /Users/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == 'santiago.f.ponce@gmail.com');
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email in ['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com']);
     }
     
     // 1. Predictions: Users can safely save ONLY to their own private profile
     match /predictions/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == 'santiago.f.ponce@gmail.com');
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email in ['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com']);
     }
     
     // 2. Leaderboard: Everyone can view it, ONLY Admin can manipulate it, Users can initialize themselves
     match /leaderboard/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == 'santiago.f.ponce@gmail.com');
+      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email in ['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com']);
     }
     
     // 3. System (Real World Scores): Everyone can read, ONLY Admin can manipulate it
     match /system/{docId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'santiago.f.ponce@gmail.com';
+      allow write: if request.auth != null && request.auth.token.email in ['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com'];
     }
 
     // 4. Mail Collection (Trigger Email Extension): Only Admin can write broadcast emails.
     match /mail/{docId} {
       allow read: if false; // No one needs to read the outgoing mail queue from the client
-      allow write: if request.auth != null && request.auth.token.email == 'santiago.f.ponce@gmail.com';
+      allow write: if request.auth != null && request.auth.token.email in ['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com'];
     }
   }
 }

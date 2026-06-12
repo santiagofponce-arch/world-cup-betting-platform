@@ -109,7 +109,7 @@ function App() {
             {t('predictionsTab')}
           </button>
           
-          {currentUser?.email === 'santiago.f.ponce@gmail.com' && (
+          {['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com'].includes(currentUser?.email) && (
             <button 
               className={`tab-button ${activeTab === 'admin' ? 'active' : ''}`}
               onClick={() => setActiveTab('admin')}
@@ -132,7 +132,7 @@ function App() {
             {activeTab === 'predictions' && (
               currentUser ? <BettingForm currentUser={currentUser} t={t} /> : <Auth onLoginSuccess={setCurrentUser} />
             )}
-            {activeTab === 'admin' && currentUser?.email === 'santiago.f.ponce@gmail.com' && (
+            {activeTab === 'admin' && ['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com'].includes(currentUser?.email) && (
               <AdminPanel />
             )}
           </>

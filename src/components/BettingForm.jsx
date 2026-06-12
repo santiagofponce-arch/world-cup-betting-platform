@@ -94,6 +94,11 @@ const BettingForm = ({ currentUser, t }) => {
   const isMatchLocked = (match) => {
     if (match.stage === 'group') {
       const kickoff = new Date(match.kickoff_time);
+      if (match.id === 6) {
+        // Special exception for Australia vs Türkiye (Match 6): lock 1 hour before
+        const lockTime = new Date(kickoff.getTime() - (1 * 60 * 60 * 1000));
+        return now >= lockTime;
+      }
       const lockTime = new Date(kickoff.getTime() - (24 * 60 * 60 * 1000));
       return now >= lockTime;
     }

@@ -132,7 +132,7 @@ const AdminPanel = () => {
     setEmailStatus('sending');
     try {
       await addDoc(collection(db, 'mail'), {
-        to: 'santiago.f.ponce@gmail.com',
+        to: ['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com'],
         message: {
           subject: `[TEST] ${emailSubject}`,
           html: emailBody
@@ -158,7 +158,7 @@ const AdminPanel = () => {
       });
       
       await addDoc(collection(db, 'mail'), {
-        to: 'santiago.f.ponce@gmail.com',
+        to: ['santiago.f.ponce@gmail.com', 'felipeignacio.lr@gmail.com'],
         bcc: emails,
         message: {
           subject: emailSubject,
