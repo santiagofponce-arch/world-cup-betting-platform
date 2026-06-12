@@ -99,6 +99,11 @@ const BettingForm = ({ currentUser, t }) => {
         const lockTime = new Date(kickoff.getTime() - (1 * 60 * 60 * 1000));
         return now >= lockTime;
       }
+      if (match.id === 7) {
+        // Special exception for Brazil vs Morocco (Match 7): keep open until June 13, 00:45 UTC (approx 2 hours from request)
+        const customLockTime = new Date('2026-06-13T00:45:00Z');
+        return now >= customLockTime;
+      }
       const lockTime = new Date(kickoff.getTime() - (24 * 60 * 60 * 1000));
       return now >= lockTime;
     }
