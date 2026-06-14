@@ -132,6 +132,27 @@ const BettingForm = ({ currentUser, t }) => {
     }
   };
 
+  const formatOffsetDateTime = (isoString, offsetHours) => {
+    try {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const d = new Date(isoString);
+      const localMs = d.getTime() + (offsetHours * 60 * 60 * 1000);
+      const localDate = new Date(localMs);
+
+      const month = months[localDate.getUTCMonth()];
+      const day = localDate.getUTCDate();
+      let h = localDate.getUTCHours();
+      const m = localDate.getUTCMinutes();
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12;
+      if (h === 0) h = 12;
+
+      return `${month} ${day}, ${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
   const getFlagUrl = (teamName) => {
     if (!teamName || !teamName.trim) return '';
     const code = teamFlags[teamName.trim()];
@@ -269,7 +290,7 @@ const BettingForm = ({ currentUser, t }) => {
           </span>
           <span className="match-date" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.4)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>
             {locked && <span title="Locked" style={{ color: 'var(--accent)' }}>🔒</span>}
-            {match.date_string.replace(', 2026', '')} | USA: <strong>{formatOffsetTime(match.kickoff_time, -4)}</strong> | CHILE: <strong>{formatOffsetTime(match.kickoff_time, -4)}</strong> | JAPAN: <strong>{formatOffsetTime(match.kickoff_time, 9)}</strong>
+            USA: <strong>{formatOffsetDateTime(match.kickoff_time, -4)}</strong> | CHILE: <strong>{formatOffsetDateTime(match.kickoff_time, -4)}</strong> | JAPAN: <strong>{formatOffsetDateTime(match.kickoff_time, 9)}</strong>
           </span>
         </div>
 
