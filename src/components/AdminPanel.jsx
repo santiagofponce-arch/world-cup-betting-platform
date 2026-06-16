@@ -15,6 +15,12 @@ const AdminPanel = () => {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [emailStatus, setEmailStatus] = useState('idle');
+  // --- Edit User Bets state ---
+  const [allUsers, setAllUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [editingUserPredictions, setEditingUserPredictions] = useState(null);
+  const [editBetStatus, setEditBetStatus] = useState('idle'); // idle | loading | saving | saved | error
+  const [editGroup, setEditGroup] = useState('A');
   const [globalLocks, setGlobalLocks] = useState({ 
     knockoutLocks: {
       'Round of 32': true,
@@ -58,7 +64,12 @@ const AdminPanel = () => {
             awardsLocked: true 
           });
         }
-      } catch (err) {
+      // Fetch all users for the edit-bets dropdown
+      const usersSnap2 = await getDocs(collection(db, 'Users'));
+      const usersList = [];
+      usersSnap2.forEach(d => usersList.push({ id: d.id, ...d.data() }));
+      setAllUsers(usersList);
+    } catch (err) {
         console.error("Error fetching real scores:", err);
       }
     };
@@ -172,6 +183,58 @@ const AdminPanel = () => {
     } catch(err) {
       console.error(err);
       setEmailStatus('error');
+    }
+  };
+
+  const handleLoadUserBets = async () => {
+    if (!selectedUserId) return;
+    setEditBetStatus('loading');
+    try {
+      const snap = await getDoc(doc(db, 'predictions', selectedUserId));
+      if (snap.exists()) {
+        setEditingUserPredictions(snap.data().scores || {});
+      } else {
+        setEditingUserPredictions({});
+      }
+      setEditBetStatus('idle');
+    } catch (err) {
+      console.error(err);
+      setEditBetStatus('error');
+    }
+  };
+
+  const handleEditBetChange = (matchId, field, value) => {
+    setEditingUserPredictions(prev => ({
+      ...prev,
+      [matchId]: { ...prev[matchId], [field]: value }
+    }));
+  };
+
+  const handleSaveUserBets = async () => {
+    if (!selectedUserId || !editingUserPredictions) return;
+    if (!window.confirm('Save these bets on behalf of this user?')) return;
+    setEditBetStatus('saving');
+    try {
+      const docRef = doc(db, 'predictions', selectedUserId);
+      const snap = await getDoc(docRef);
+      const existing = snap.exists() ? snap.data() : {};
+      // Clean empty pairs
+      const cleaned = { ...editingUserPredictions };
+      Object.keys(cleaned).forEach(k => {
+        const h = cleaned[k]?.home;
+        const a = cleaned[k]?.away;
+        if ((h === '' || h === undefined) && (a === '' || a === undefined)) delete cleaned[k];
+      });
+      await setDoc(docRef, {
+        ...existing,
+        scores: cleaned,
+        lastUpdated: new Date().toISOString() + ' [ADMIN OVERRIDE]'
+      }, { merge: true });
+      setEditBetStatus('saved');
+      setTimeout(() => setEditBetStatus('idle'), 3000);
+    } catch (err) {
+      console.error(err);
+      setEditBetStatus('error');
     }
   };
 

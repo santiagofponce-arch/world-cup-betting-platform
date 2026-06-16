@@ -92,22 +92,29 @@ const BettingForm = ({ currentUser, t }) => {
   }, [currentUser]);
 
   const isMatchLocked = (match) => {
+    const now = new Date();
     if (match.stage === 'group') {
       const kickoff = new Date(match.kickoff_time);
+      // Australia vs Türkiye (Match 6): lock 1 hour before kickoff
       if (match.id === 6) {
-        // Special exception for Australia vs Türkiye (Match 6): lock 1 hour before
-        const lockTime = new Date(kickoff.getTime() - (1 * 60 * 60 * 1000));
+        const lockTime = new Date(kickoff.getTime() - 1 * 60 * 60 * 1000);
         return now >= lockTime;
       }
+      // Brazil vs Morocco (Match 7): custom lock until 2026-06-13 00:45 UTC
       if (match.id === 7) {
-        // Special exception for Brazil vs Morocco (Match 7): keep open until June 13, 00:45 UTC (approx 2 hours from request)
         const customLockTime = new Date('2026-06-13T00:45:00Z');
         return now >= customLockTime;
       }
-      const lockTime = new Date(kickoff.getTime() - (24 * 60 * 60 * 1000));
-      return now >= lockTime;
+      // Austria vs Jordan (Match 20): unlock until 1 hour before kickoff
+      if (match.id === 20) {
+        const lockTime = new Date(kickoff.getTime() - 1 * 60 * 60 * 1000);
+        return now >= lockTime;
+      }
+      // Default: lock 24 hours before kickoff
+      const defaultLock = new Date(kickoff.getTime() - 24 * 60 * 60 * 1000);
+      return now >= defaultLock;
     }
-
+    // Knockout stage locks
     if (globalLocks.knockoutLocks && globalLocks.knockoutLocks[match.stage]) {
       return true;
     }
