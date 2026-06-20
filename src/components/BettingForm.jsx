@@ -106,6 +106,11 @@ const BettingForm = ({ currentUser, t }) => {
         return now >= customLockTime;
       }
       // Austria vs Jordan (Match 20): unlock until 1 hour before kickoff
+      if (match.id === 36) {
+        // Special exception for Tunisia vs Japan (Match 36): unlock until 1 h before kickoff
+        const lockTime = new Date(kickoff.getTime() - 1 * 60 * 60 * 1000);
+        return now >= lockTime;
+      }
       if (match.id === 20) {
         const lockTime = new Date(kickoff.getTime() - 1 * 60 * 60 * 1000);
         return now >= lockTime;
