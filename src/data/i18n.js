@@ -218,6 +218,16 @@ export const translations = {
     es: "🔒 Esta sección está completamente bloqueada por la Administración.",
     en: "🔒 This section is completely locked by Administration.",
     ja: "🔒 このセクションは管理者によって完全にロックされています。"
+  },
+  realScore: {
+    es: "Resultado Real",
+    en: "Real Score",
+    ja: "実際のスコア"
+  },
+  pointsGained: {
+    es: "Puntos Obtenidos",
+    en: "Points Gained",
+    ja: "獲得ポイント"
   }
 };
 

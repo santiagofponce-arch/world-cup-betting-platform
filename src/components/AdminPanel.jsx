@@ -206,7 +206,7 @@ const AdminPanel = () => {
   const handleEditBetChange = (matchId, field, value) => {
     setEditingUserPredictions(prev => ({
       ...prev,
-      [matchId]: { ...prev[matchId], [field]: value }
+      [matchId]: { ...(prev[matchId] || {}), [field]: value }
     }));
   };
 
@@ -489,6 +489,7 @@ const AdminPanel = () => {
       <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
         <button onClick={() => setAdminView('group')} style={{ padding: '0.8rem 2rem', fontWeight: 'bold', background: adminView === 'group' ? 'var(--primary)' : '#333', color: adminView === 'group' ? 'black' : 'white', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>Group Matches</button>
         <button onClick={() => setAdminView('knockout')} style={{ padding: '0.8rem 2rem', fontWeight: 'bold', background: adminView === 'knockout' ? 'var(--primary)' : '#333', color: adminView === 'knockout' ? 'black' : 'white', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>Knockout Matches</button>
+        <button onClick={() => setAdminView('editBets')} style={{ padding: '0.8rem 2rem', fontWeight: 'bold', background: adminView === 'editBets' ? 'var(--primary)' : '#333', color: adminView === 'editBets' ? 'black' : 'white', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>Player Bets Override</button>
       </div>
 
       {adminView === 'group' && (
@@ -522,67 +523,199 @@ const AdminPanel = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-
-        {matchesData.filter(m => {
-          if (adminView === 'group') return m.stage === 'group' && m.group === adminActiveGroup;
-          return m.stage !== 'group';
-        }).map(match => (
-          <div key={match.id} style={{ background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Match {match.id} | {match.stage === 'group' ? `Group ${match.group}` : match.stage}</div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 'bold', width: '80px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{match.home}</span>
-              <input 
-                type="number" min="0" 
-                style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '8px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}
-                value={realScores[match.id]?.home ?? ''}
-                onKeyDown={(e) => { if(['e', 'E', '.', ',', '+', '-'].includes(e.key)) e.preventDefault(); }}
-                onChange={(e) => handleResultChange(match.id, 'home', e.target.value)}
-              />
-              <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>VS</span>
-              <input 
-                type="number" min="0" 
-                style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '8px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}
-                value={realScores[match.id]?.away ?? ''}
-                onKeyDown={(e) => { if(['e', 'E', '.', ',', '+', '-'].includes(e.key)) e.preventDefault(); }}
-                onChange={(e) => handleResultChange(match.id, 'away', e.target.value)}
-              />
-              <span style={{ fontWeight: 'bold', width: '80px', textAlign: 'right', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{match.away}</span>
-            </div>
-
-            {match.stage !== 'group' && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-                <label style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={!!realScores[match.id]?.penalties}
-                    onChange={(e) => handleResultChange(match.id, 'penalties', e.target.checked)}
-                  />
-                  Shootout?
-                </label>
-                
-                {realScores[match.id]?.home === realScores[match.id]?.away && realScores[match.id]?.home !== '' && (
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button 
-                      onClick={() => handleResultChange(match.id, 'qualifier', 'home')}
-                      style={{ fontSize: '0.6rem', padding: '0.2rem 0.4rem', background: realScores[match.id]?.qualifier === 'home' ? '#ff4757' : 'transparent', border: '1px solid #ff4757', color: 'white', borderRadius: '4px' }}
-                    >
-                      {match.home.substring(0, 3).toUpperCase()} Qual
-                    </button>
-                    <button 
-                      onClick={() => handleResultChange(match.id, 'qualifier', 'away')}
-                      style={{ fontSize: '0.6rem', padding: '0.2rem 0.4rem', background: realScores[match.id]?.qualifier === 'away' ? '#ff4757' : 'transparent', border: '1px solid #ff4757', color: 'white', borderRadius: '4px' }}
-                    >
-                      {match.away.substring(0, 3).toUpperCase()} Qual
-                    </button>
-                  </div>
-                )}
+      {(adminView === 'group' || adminView === 'knockout') && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+          {matchesData.filter(m => {
+            if (adminView === 'group') return m.stage === 'group' && m.group === adminActiveGroup;
+            return m.stage !== 'group';
+          }).map(match => (
+            <div key={match.id} style={{ background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Match {match.id} | {match.stage === 'group' ? `Group ${match.group}` : match.stage}</div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 'bold', width: '80px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{match.home}</span>
+                <input 
+                  type="number" min="0" 
+                  style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '8px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}
+                  value={realScores[match.id]?.home ?? ''}
+                  onKeyDown={(e) => { if(['e', 'E', '.', ',', '+', '-'].includes(e.key)) e.preventDefault(); }}
+                  onChange={(e) => handleResultChange(match.id, 'home', e.target.value)}
+                />
+                <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>VS</span>
+                <input 
+                  type="number" min="0" 
+                  style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '8px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}
+                  value={realScores[match.id]?.away ?? ''}
+                  onKeyDown={(e) => { if(['e', 'E', '.', ',', '+', '-'].includes(e.key)) e.preventDefault(); }}
+                  onChange={(e) => handleResultChange(match.id, 'away', e.target.value)}
+                />
+                <span style={{ fontWeight: 'bold', width: '80px', textAlign: 'right', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{match.away}</span>
               </div>
-            )}
+
+              {match.stage !== 'group' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                  <label style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={!!realScores[match.id]?.penalties}
+                      onChange={(e) => handleResultChange(match.id, 'penalties', e.target.checked)}
+                    />
+                    Shootout?
+                  </label>
+                  
+                  {realScores[match.id]?.home === realScores[match.id]?.away && realScores[match.id]?.home !== '' && (
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button 
+                        onClick={() => handleResultChange(match.id, 'qualifier', 'home')}
+                        style={{ fontSize: '0.6rem', padding: '0.2rem 0.4rem', background: realScores[match.id]?.qualifier === 'home' ? '#ff4757' : 'transparent', border: '1px solid #ff4757', color: 'white', borderRadius: '4px' }}
+                      >
+                        {match.home.substring(0, 3).toUpperCase()} Qual
+                      </button>
+                      <button 
+                        onClick={() => handleResultChange(match.id, 'qualifier', 'away')}
+                        style={{ fontSize: '0.6rem', padding: '0.2rem 0.4rem', background: realScores[match.id]?.qualifier === 'away' ? '#ff4757' : 'transparent', border: '1px solid #ff4757', color: 'white', borderRadius: '4px' }}
+                      >
+                        {match.away.substring(0, 3).toUpperCase()} Qual
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {adminView === 'editBets' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h3 style={{ color: 'var(--primary)', margin: 0 }}>Select Player to Modify</h3>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <select 
+                value={selectedUserId} 
+                onChange={(e) => {
+                  setSelectedUserId(e.target.value);
+                  setEditingUserPredictions(null);
+                }}
+                style={{ flex: 1, minWidth: '200px', padding: '0.8rem', background: 'rgba(0,0,0,0.3)', color: 'white', border: 'none', borderRadius: '8px' }}
+              >
+                <option value="">Select a player...</option>
+                {allUsers.map(u => (
+                  <option key={u.id} value={u.id} style={{ color: 'black' }}>
+                    {u.name || u.displayName || u.username || u.email || u.id}
+                  </option>
+                ))}
+              </select>
+              <button 
+                onClick={handleLoadUserBets}
+                disabled={!selectedUserId || editBetStatus === 'loading'}
+                style={{ padding: '0.8rem 1.5rem', background: 'var(--primary)', color: 'black', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
+              >
+                {editBetStatus === 'loading' ? 'Loading...' : 'Load Player Bets'}
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
+
+          {editingUserPredictions && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '1rem 1.5rem', borderRadius: '12px' }}>
+                <h4 style={{ margin: 0, color: 'white' }}>
+                  Modifying Bets for: <span style={{ color: 'var(--primary)' }}>{allUsers.find(u => u.id === selectedUserId)?.name || selectedUserId}</span>
+                </h4>
+                <button
+                  onClick={handleSaveUserBets}
+                  disabled={editBetStatus === 'saving'}
+                  style={{ padding: '0.8rem 2rem', background: '#ff4757', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
+                >
+                  {editBetStatus === 'saving' ? 'Saving Override...' : editBetStatus === 'saved' ? 'Saved Successfully!' : 'Save Override Changes'}
+                </button>
+              </div>
+
+              {/* Group selection for editing user bets */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px' }}>
+                {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'Knockout'].map(g => (
+                  <button 
+                    key={g} 
+                    onClick={() => setEditGroup(g)}
+                    style={{ padding: '0.5rem 1rem', background: editGroup === g ? '#ff4757' : '#222', color: 'white', borderRadius: '6px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
+                  >
+                    {g === 'Knockout' ? 'Knockouts' : `Group ${g}`}
+                  </button>
+                ))}
+              </div>
+
+              {/* List matches for selected group to edit player predictions */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                {matchesData.filter(m => {
+                  if (editGroup === 'Knockout') return m.stage !== 'group';
+                  return m.stage === 'group' && m.group === editGroup;
+                }).map(match => {
+                  const pred = editingUserPredictions[match.id] || { home: '', away: '', penalties: false, qualifier: '' };
+                  return (
+                    <div key={match.id} style={{ background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                        Match {match.id} | {match.stage === 'group' ? `Group ${match.group}` : match.stage}
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 'bold', width: '80px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{match.home}</span>
+                        <input 
+                          type="number" min="0" 
+                          placeholder="?"
+                          style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '8px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}
+                          value={pred.home ?? ''}
+                          onKeyDown={(e) => { if(['e', 'E', '.', ',', '+', '-'].includes(e.key)) e.preventDefault(); }}
+                          onChange={(e) => handleEditBetChange(match.id, 'home', e.target.value)}
+                        />
+                        <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>VS</span>
+                        <input 
+                          type="number" min="0" 
+                          placeholder="?"
+                          style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '8px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}
+                          value={pred.away ?? ''}
+                          onKeyDown={(e) => { if(['e', 'E', '.', ',', '+', '-'].includes(e.key)) e.preventDefault(); }}
+                          onChange={(e) => handleEditBetChange(match.id, 'away', e.target.value)}
+                        />
+                        <span style={{ fontWeight: 'bold', width: '80px', textAlign: 'right', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{match.away}</span>
+                      </div>
+
+                      {match.stage !== 'group' && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                          <label style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={!!pred.penalties}
+                              onChange={(e) => handleEditBetChange(match.id, 'penalties', e.target.checked)}
+                            />
+                            Shootout?
+                          </label>
+                          
+                          {pred.home === pred.away && pred.home !== '' && (
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button 
+                                onClick={() => handleEditBetChange(match.id, 'qualifier', 'home')}
+                                style={{ fontSize: '0.6rem', padding: '0.2rem 0.4rem', background: pred.qualifier === 'home' ? '#ff4757' : 'transparent', border: '1px solid #ff4757', color: 'white', borderRadius: '4px' }}
+                              >
+                                {match.home.substring(0, 3).toUpperCase()} Qual
+                              </button>
+                              <button 
+                                onClick={() => handleEditBetChange(match.id, 'qualifier', 'away')}
+                                style={{ fontSize: '0.6rem', padding: '0.2rem 0.4rem', background: pred.qualifier === 'away' ? '#ff4757' : 'transparent', border: '1px solid #ff4757', color: 'white', borderRadius: '4px' }}
+                              >
+                                {match.away.substring(0, 3).toUpperCase()} Qual
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

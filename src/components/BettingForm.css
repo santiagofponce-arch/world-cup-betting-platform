@@ -264,6 +264,12 @@
   border-color: var(--accent);
 }
 
+.match-card.locked.has-result {
+  opacity: 0.95;
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(16, 232, 130, 0.25);
+}
+
 .match-card.locked .score-input {
   background: rgba(0,0,0,0.4);
   color: var(--text-muted);

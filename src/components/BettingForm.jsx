@@ -7,10 +7,12 @@ import { teamFlags, groupColors } from '../data/teamFlags';
 import { translations, countryNames } from '../data/i18n';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { calculateMatchPoints } from '../utils/scoringLogic';
 
 const BettingForm = ({ currentUser, t }) => {
   const [predictions, setPredictions] = useState({});
   const [awards, setAwards] = useState({});
+  const [realScores, setRealScores] = useState({});
 
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [saveStatus, setSaveStatus] = useState('idle');
@@ -39,6 +41,16 @@ const BettingForm = ({ currentUser, t }) => {
     const unsub = onSnapshot(doc(db, 'system', 'global_settings'), docSnap => {
       if (docSnap.exists()) {
         setGlobalLocks(docSnap.data());
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Sync to real results (for showing correct score & points)
+  React.useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'system', 'real_results'), docSnap => {
+      if (docSnap.exists()) {
+        setRealScores(docSnap.data().scores || {});
       }
     });
     return () => unsub();
@@ -279,6 +291,20 @@ const BettingForm = ({ currentUser, t }) => {
   const renderMatchCard = (match) => {
     const locked = isMatchLocked(match);
 
+    const realResult = realScores[match.id];
+    const hasRealResult = realResult && 
+      realResult.home !== undefined && realResult.home !== '' &&
+      realResult.away !== undefined && realResult.away !== '';
+      
+    let matchPoints = null;
+    let isExact = false;
+    if (locked && hasRealResult) {
+      const pred = predictions[match.id] || { home: '', away: '', penalties: false, qualifier: '' };
+      const res = calculateMatchPoints(pred, realResult, match.stage);
+      matchPoints = res.points;
+      isExact = res.isExact;
+    }
+
     const hexColor = getHexColor(match);
     const homeFlagUrl = getFlagUrl(match.home);
     const awayFlagUrl = getFlagUrl(match.away);
@@ -287,7 +313,7 @@ const BettingForm = ({ currentUser, t }) => {
     return (
       <div
         key={match.id}
-        className={`match-card ${locked ? 'locked' : ''} group-stage-card`}
+        className={`match-card ${locked ? 'locked' : ''} ${hasRealResult ? 'has-result' : ''} group-stage-card`}
         style={{
           '--card-bg-color': hexColor,
           ...(hasFlags ? {
@@ -339,6 +365,30 @@ const BettingForm = ({ currentUser, t }) => {
             <span className="team-name">{match.away}</span>
           </div>
         </div>
+
+        {locked && hasRealResult && (
+          <div style={{ 
+            marginTop: '1rem', 
+            marginBottom: '0.5rem',
+            padding: '0.8rem', 
+            background: 'rgba(16, 232, 130, 0.1)', 
+            borderRadius: '12px', 
+            border: '1px solid var(--primary)', 
+            textAlign: 'center',
+            alignSelf: 'stretch'
+          }}>
+            <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>
+              {t('realScore') || 'Resultado Real'}: <strong style={{ color: 'white', fontSize: '1.15rem' }}>{realResult.home} - {realResult.away}</strong>
+              {match.stage !== 'group' && realResult.penalties && (
+                <span style={{ fontSize: '0.8rem', color: '#ff4757', marginLeft: '0.5rem' }}>({t('wentToPenalties') || 'Penales'})</span>
+              )}
+            </div>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', marginTop: '0.4rem', color: 'var(--primary)' }}>
+              {t('pointsGained') || 'Puntos Obtenidos'}: +{matchPoints} {t('pts') || 'pts'}
+              {isExact && <span style={{ marginLeft: '0.5rem', fontSize: '0.95rem' }} title="Exact Score!">🎯</span>}
+            </div>
+          </div>
+        )}
 
         <div style={{ textAlign: 'center', marginTop: '0.8rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', backgroundColor: 'rgba(0,0,0,0.4)', padding: '0.2rem 0.5rem', borderRadius: '4px', alignSelf: 'center' }}>
           {match.stadium}
